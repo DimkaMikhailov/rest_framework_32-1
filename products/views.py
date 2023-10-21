@@ -7,7 +7,7 @@ from products.serializers import *
 
 @api_view(['GET'])
 def products_list(request):
-    products = Product.objects.all()
+    products = Product.objects.select_related('category').all()
     json = ProductSerializer(products, many=True)
     return Response(data=json.data)
 
@@ -25,8 +25,8 @@ def product_detail(request, product_id):
 
 @api_view(['GET'])
 def categories_list(request):
-    categories = Category.objects.all()
-    json = CategorySerializer(categories, many=True)
+    categories = Category.objects.prefetch_related('product').all()
+    json = CategoryListSerializer(categories, many=True)
     return Response(data=json.data, status=status.HTTP_200_OK)
 
 
@@ -57,4 +57,11 @@ def review_detail(request, review_id):
 
     except Review.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+def products_reviews(request):
+    p = Product.objects.select_related('category').prefetch_related('reviews').all()
+    json = ProductsReviewsSerializer(p, many=True)
+    return Response(data=json.data, status=status.HTTP_200_OK)
 

@@ -7,6 +7,10 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def products_count(self):
+        return self.product.count()
+
 
 class Product(models.Model):
     title = models.CharField(max_length=50)
@@ -20,11 +24,29 @@ class Product(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def rating(self):
+        reviews = self.reviews.all()
+        _sum = sum([r.starts for r in reviews])
+        return round(_sum / len(reviews), 3) if 0 < _sum > len(reviews) else 0
+
+
+STARS = (
+            (1, '⭐'),
+            (2, '⭐' * 2),
+            (3, '⭐' * 3),
+            (4, '⭐' * 4),
+            (5, '⭐' * 5),
+        )
+
 
 class Review(models.Model):
-    comment = models.TextField()
+    product = models.ForeignKey(to=Product, on_delete=models.DO_NOTHING, related_name='reviews')
 
-    product = models.ForeignKey(to=Product, on_delete=models.DO_NOTHING, related_name='review')
+    comment = models.TextField()
+    starts = models.IntegerField(choices=STARS, default=1)
 
     def __str__(self):
         return self.comment
+
+
