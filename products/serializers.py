@@ -8,7 +8,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
-class CategoryListSerializer(CategorySerializer):
+class CategoryDetailSerializer(CategorySerializer):
     class Meta(CategorySerializer.Meta):
         fields = CategorySerializer.Meta.fields + ['products_count']
 
@@ -17,6 +17,21 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'comment']
+
+
+class ReviewListSerializer(serializers.ModelSerializer):
+    product = serializers.SerializerMethodField()
+    review_id = serializers.SerializerMethodField()
+
+    def get_review_id(self, review):
+        return review.pk
+
+    def get_product(self, review):
+        return review.product.title
+
+    class Meta:
+        model = Review
+        fields = 'review_id comment product'.split()[::-1]
 
 
 class ProductSerializer(serializers.ModelSerializer):
