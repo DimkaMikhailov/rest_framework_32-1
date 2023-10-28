@@ -71,7 +71,7 @@ class ReviewCreateValidSerializer(serializers.Serializer):
 
     def validate_comment(self, text):
         invalid = set(text.lower().split())
-        ban_words = ['bitch', 'fuck', 'shirt']
+        ban_words = ['bitch', 'fuck', 'shirt', 'fuck,', 'bitch,']
 
         for words in ban_words:
             if words in invalid:
@@ -115,11 +115,11 @@ class ProductCreateValidSerializer(serializers.Serializer):
 
     @property
     def primitive(self):
-        return {k: v for k, v in self.validated_data.items() if type(v) in (map(type, ['', 0, 0.0, True]))}
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (str, int, float, bool))}
 
     @property
     def collection(self):
-        return {k: v for k, v in self.validated_data.items() if type(v) not in (map(type, ['', 0, 0.0, True]))}
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list | tuple | dict))}
 
     def validate_category_id(self, category_id):
         try:
