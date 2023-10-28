@@ -8,17 +8,18 @@ from products.serializers import *
 @api_view(['GET', 'POST'])
 def products_list(request):
     if request.method == 'GET':
-        products = Product.objects.select_related('category').all()
+        products = Product.objects.select_related('category').prefetch_related('tags').all()
         json = ProductSerializer(products, many=True)
         return Response(data={"products": json.data}, status=status.HTTP_200_OK)
     elif request.method == 'POST' and request.data:
-        products = Product()
-        products.title = request.data.get('title')
-        products.description = request.data.get('description')
-        products.price = request.data.get('price')
-        products.category_id = request.data.get('category_id')
-        products.save()
-        json = ProductSerializer(products)
+        serializer = ProductCreateValidSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"product": "bad request", "error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        product = Product(**serializer.primitive)
+        product.save()
+        product.tags.set(serializer.collection.get('tags'))
+        json = ProductSerializer(product)
         return Response(data={"products": json.data}, status=status.HTTP_201_CREATED)
 
 
@@ -31,13 +32,17 @@ def product_detail(request, product_id):
             json = ProductSerializer(product)
             return Response(status=status.HTTP_200_OK, data={'product': json.data})
         elif request.method in 'PATCH PUT'.split() and request.data:
-            product.title = request.data.get('title', product.title)
-            product.description = request.data.get('description', product.description)
-            product.price = request.data.get('price', product.price)
-            product.category_id = request.data.get('category_id', product.category_id)
+            serializer = ProductUpdateValidSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(data={"product": "bad request", "error": serializer.errors},
+                                status=status.HTTP_400_BAD_REQUEST)
+            for k, v in serializer.primitive.items():
+                setattr(product, k, v)
             product.save()
+            product.tags.set(serializer.collection.get('tags'))
             json = ProductSerializer(product)
             return Response(status=status.HTTP_201_CREATED, data={'message': f'{product.pk} updated', 'product': json.data})
+
         elif request.method == 'DELETE':
             product.delete()
             return Response(status=status.HTTP_204_NO_CONTENT, data={'message': f'{product_id=} deleted'})
@@ -55,7 +60,12 @@ def categories_list(request):
         json = CategoryDetailSerializer(categories, many=True)
         return Response(data={'categories': json.data}, status=status.HTTP_200_OK)
     elif request.method == 'POST' and request.data:
-        category = Category.objects.create(name=request.data.get('name'))
+        serializer = CategoryCreateUpdateValidSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"category": "bad request", "error": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        category = Category.objects.create(name=serializer.validated_data.get('name'))
         json = CategorySerializer(category)
         return Response(status=status.HTTP_201_CREATED, data={'category': json.data})
     else:
@@ -71,7 +81,11 @@ def category_view(request, category_id):
             json = CategoryDetailSerializer(category)
             return Response(data={'category': json.data}, status=status.HTTP_200_OK)
         elif request.method in 'PUT PATCH'.split() and request.data:
-            category.name = request.data.get('name', category.name)
+            serializer = CategoryCreateUpdateValidSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(data={"category": "bad request", "error": serializer.errors},
+                                status=status.HTTP_400_BAD_REQUEST)
+            category.name = serializer.validated_data.get('name', category.name)
             category.save()
             json = CategoryDetailSerializer(category)
             return Response(data={'message': 'updated', 'category': json.data})
@@ -92,10 +106,14 @@ def reviews_list(request):
         json = ReviewListSerializer(reviews, many=True)
         return Response(data={'reviews': json.data}, status=status.HTTP_200_OK)
     elif request.method == 'POST' and request.data:
+        serializer = ReviewCreateValidSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"review": "bad request", "error": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
         review = Review()
-        review.product_id = request.data.get('product_id')
-        review.comment = request.data.get('comment')
-        review.starts = request.data.get('stars', 1)
+        review.product_id = serializer.validated_data.get('product_id')
+        review.comment = serializer.validated_data.get('comment')
+        review.starts = serializer.validated_data.get('stars', 1)
         review.save()
         json = ReviewSerializer(review)
         return Response(data={'message': f"{review.pk} created", 'review': json.data}, status=status.HTTP_201_CREATED)
@@ -110,8 +128,13 @@ def review_detail(request, review_id):
             json = ReviewSerializer(review)
             return Response(data=json.data, status=status.HTTP_200_OK)
         elif request.method in ['PUT', 'PATCH'] and request.data:
-            review.comment = request.data.get('comment', review.comment)
-            review.starts = request.data.get('stars', review.starts)
+            serializer = ReviewUpdateValidSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(data={"review": "bad request", "error": serializer.errors},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            review.comment = serializer.validated_data.get('comment', review.comment)
+            review.starts = serializer.validated_data.get('stars', review.starts)
             review.save()
             json = ReviewSerializer(review)
             return Response(data={'message': f"{review_id=} updated", 'review': json.data})
@@ -129,4 +152,12 @@ def review_detail(request, review_id):
 def products_reviews(request):
     p = Product.objects.select_related('category').prefetch_related('reviews').all()
     json = ProductsReviewsSerializer(p, many=True)
+    return Response(data=json.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def tag_review(request):
+    tag = Tag.objects.all()
+    json = TagsSerializer(tag, many=True)
+
     return Response(data=json.data, status=status.HTTP_200_OK)

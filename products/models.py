@@ -12,6 +12,13 @@ class Category(models.Model):
         return self.product.count()
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=10)
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField()
@@ -20,6 +27,7 @@ class Product(models.Model):
     in_stock = models.BooleanField(default=True)
 
     category = models.ForeignKey(to=Category, on_delete=models.DO_NOTHING, related_name='product')
+    tags = models.ManyToManyField(to=Tag, related_name='product')
 
     def __str__(self):
         return self.title
