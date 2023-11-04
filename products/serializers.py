@@ -133,7 +133,7 @@ class ProductCreateValidSerializer(serializers.Serializer):
         if error_index := [tags.index(i) for i in tags if i not in valid_tags]:
             e = ValidationError()
             for er in error_index:
-                e.detail.append({f'tag[{er}]': 'Not in tag collection'})
+                e.detail.append({f'tag[{er}]': 'Not in tags collection'})
             raise e
         return tags
 

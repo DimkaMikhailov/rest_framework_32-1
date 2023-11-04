@@ -180,7 +180,7 @@ def products_reviews(request):
 
 @api_view(['GET'])
 def tag_review(request):
-    tag = Tag.objects.all()
+    tag = Tag.objects.select_related('product').all()
     json = TagsSerializer(tag, many=True)
 
     return Response(data=json.data, status=status.HTTP_200_OK)
