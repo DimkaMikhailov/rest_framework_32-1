@@ -25,6 +25,14 @@ class CategoryCreateUpdateValidSerializer(serializers.Serializer):
             raise ValidationError(f'{name=} already in collection')
         return name
 
+    @property
+    def primitive(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (str, int, float, bool))}
+
+    @property
+    def collection(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple, dict))}
+
 
 # --------------------------------TAGS--------------------------------------
 
@@ -60,7 +68,7 @@ class ReviewListSerializer(serializers.ModelSerializer):
 class ReviewCreateValidSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(min_value=1)
     comment = serializers.CharField(min_length=10, max_length=500)
-    stars = serializers.IntegerField(min_value=1, max_value=5, required=False, default=1)
+    starts = serializers.IntegerField(min_value=1, max_value=5, required=False, default=1)
 
     def validate_product_id(self, product_id):
         try:
@@ -78,9 +86,17 @@ class ReviewCreateValidSerializer(serializers.Serializer):
                 raise ValidationError('incorrect comment')
         return text
 
+    @property
+    def primitive(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (str, int, float, bool))}
+
+    @property
+    def collection(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple, dict))}
+
 
 class ReviewUpdateValidSerializer(ReviewCreateValidSerializer):
-    stars = serializers.IntegerField(min_value=1, max_value=5, required=False, default=1)
+    starts = serializers.IntegerField(min_value=1, max_value=5, required=False, default=1)
     comment = serializers.CharField(max_length=500, required=False)
 
 
@@ -89,7 +105,6 @@ class ReviewUpdateValidSerializer(ReviewCreateValidSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
-    # tags = TagsSerializer(many=True)
 
     def get_tags(self, product):
         return [tag.name for tag in product.tags.all()]
@@ -119,7 +134,7 @@ class ProductCreateValidSerializer(serializers.Serializer):
 
     @property
     def collection(self):
-        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list | tuple | dict))}
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple, dict))}
 
     def validate_category_id(self, category_id):
         try:

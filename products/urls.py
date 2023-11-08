@@ -2,12 +2,28 @@ from django.urls import path
 from products.views import *
 
 urlpatterns = [
-    path('api/v1/products/', products_list),
-    path('api/v1/products/<int:product_id>/', product_detail),
-    path('api/v1/products/reviews/', products_reviews),
-    path('api/v1/categories/', categories_list),
-    path('api/v1/categories/<int:category_id>/', category_view),
-    path('api/v1/reviews/', reviews_list),
-    path('api/v1/reviews/<int:review_id>/', review_detail),
-    path('api/v1/tags/', tag_review),
+    path('products/', ProductListCreateAPIView.as_view()),
+    path('products/<int:id>/', ProductRetrieveUpdateDestroyAPIView.as_view()),
+    path('products/reviews/', ProductReviewListAPIView.as_view()),
+    path('categories/', CategoryViewSet.as_view({
+        'post': 'create',
+        'get': 'list'
+    })),
+    path('categories/<int:id>/', CategoryViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'delete'
+    })),
+    path('reviews/', ReviewViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    })),
+    path('reviews/<int:id>/', ReviewViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'patch': 'partial_update',
+        'delete': 'delete'
+    })),
+    path('tags/', TagListAPIView.as_view()),
 ]
