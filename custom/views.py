@@ -12,34 +12,51 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
+class QuerySetError(ValueError):
+    pass
+
+
 class SerializerClassError(ValueError):
     pass
 
 
 class CustomGenericAPIView(GenericAPIView):
+    queryset: QuerySet = None
     model: models.Model = None
     select: tuple[str] | str = None
     prefetch: tuple[str] | str = None
 
     def get_serializer_class(self):
-        if not self.serializer_class:
+        serializer = self.serializer_class
+        if serializer:
+            pass
+        else:
             if self.request.method == "POST":
-                return self.create_serializer
+                serializer = self.create_serializer
             elif self.request.method == "GET":
                 print(self.kwargs)
                 model_fields = [field.name for field in self.get_model_fields()]
                 if set(self.kwargs.keys()).intersection(set(model_fields)):
-                    return self.retrieve_serializer
+                    serializer = self.retrieve_serializer
                 else:
-                    return self.list_serializer
+                    serializer = self.list_serializer
             elif self.request.method in ["PUT", "PATCH"]:
-                return self.update_serializer
-        else:
-            return self.serializer_class
+                serializer = self.update_serializer
+
+        assert serializer is not None, (
+                "'%s' should either include a `serializer_class` attribute, "
+                "or override the `get_serializer_class()` method."
+                % self.__class__.__name__
+        )
+
+        return serializer
 
     def get_queryset(self):
         queryset = self.queryset
-        if not queryset:
+        if queryset:
+            pass
+        else:
+            if not self.model: raise QuerySetError('attribute model does not None')
             queryset = self.model.objects
             if self.select:
                 queryset = queryset.select_related(*self.select) if isinstance(self.select, (
@@ -47,6 +64,12 @@ class CustomGenericAPIView(GenericAPIView):
             if self.prefetch:
                 queryset = queryset.prefetch_related(*self.prefetch) if isinstance(self.prefetch, (
                     tuple, list)) else queryset.prefetch_related(self.prefetch)
+
+        assert queryset is not None, (
+                "'%s' should either include a `queryset` attribute, "
+                "or override the `get_queryset()` method."
+                % self.__class__.__name__
+        )
 
         if isinstance(queryset, QuerySet):
             queryset = queryset.all()
@@ -61,11 +84,13 @@ class CustomCreateModelMixin(CreateModelMixin):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         obj = self.model.objects.create(**serializer.primitive)
-        self.perform_create(obj)
+
         for field in self.get_model_fields():
             if isinstance(field, models.ManyToManyField):
                 data = serializer.validated_data.get(field.name, [])
                 getattr(obj, field.name).set(data)
+
+        self.perform_create(obj)
         headers = self.get_success_headers(serializer.data)
         return Response(self.list_serializer(obj).data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -80,7 +105,7 @@ class CustomUpdateModelMixin(UpdateModelMixin):
             setattr(obj, k, v)
         self.perform_update(obj)
 
-        for field in self.get_model_fields():
+        for field in serializer.collection:
             if isinstance(field, models.ManyToManyField):
                 data = serializer.validated_data.get(field.name, [])
                 getattr(obj, field.name).set(data)

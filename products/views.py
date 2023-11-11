@@ -16,6 +16,9 @@ from custom.views import (CustomListCreateAPIView,
 
 
 class ProductListCreateAPIView(CustomListCreateAPIView):
+    """
+    View for handling product creation and listing.
+    """
     model = Product
     prefetch = 'tags'
     select = 'category'
