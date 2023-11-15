@@ -3,6 +3,16 @@ from rest_framework.exceptions import ValidationError
 from products.models import Product, Category, Review, Tag
 
 
+class CustomSerializer(serializers.Serializer):
+    @property
+    def primitive(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (str, int, float, bool))}
+
+    @property
+    def collection(self):
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple))}
+
+
 # --------------------------------CATEGORIES--------------------------------------
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,23 +25,14 @@ class CategoryDetailSerializer(CategorySerializer):
         fields = CategorySerializer.Meta.fields + ['products_count']
 
 
-class CategoryCreateUpdateValidSerializer(serializers.Serializer):
+class CategoryCreateUpdateValidSerializer(CustomSerializer):
     name = serializers.CharField()
 
     def validate_name(self, name):
         categories = list(Category.objects.values_list('name', flat=True))
-        print(categories)
         if name in categories:
             raise ValidationError(f'{name=} already in collection')
         return name
-
-    @property
-    def primitive(self):
-        return {k: v for k, v in self.validated_data.items() if isinstance(v, (str, int, float, bool))}
-
-    @property
-    def collection(self):
-        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple, dict))}
 
 
 # --------------------------------TAGS--------------------------------------
@@ -134,7 +135,7 @@ class ProductCreateValidSerializer(serializers.Serializer):
 
     @property
     def collection(self):
-        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple, dict))}
+        return {k: v for k, v in self.validated_data.items() if isinstance(v, (list, tuple))}
 
     def validate_category_id(self, category_id):
         try:

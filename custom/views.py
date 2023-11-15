@@ -20,6 +20,16 @@ class SerializerClassError(ValueError):
     pass
 
 
+class BaseSerializer(serializers.ModelSerializer):
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.Meta.model = model
+
+    class Meta:
+        model: models.Model = None
+        fields = "__all__"
+
+
 class CustomGenericAPIView(GenericAPIView):
     queryset: QuerySet = None
     model: models.Model = None
@@ -34,7 +44,6 @@ class CustomGenericAPIView(GenericAPIView):
             if self.request.method == "POST":
                 serializer = self.create_serializer
             elif self.request.method == "GET":
-                print(self.kwargs)
                 model_fields = [field.name for field in self.get_model_fields()]
                 if set(self.kwargs.keys()).intersection(set(model_fields)):
                     serializer = self.retrieve_serializer
@@ -84,11 +93,11 @@ class CustomCreateModelMixin(CreateModelMixin):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         obj = self.model.objects.create(**serializer.primitive)
-
-        for field in self.get_model_fields():
-            if isinstance(field, models.ManyToManyField):
-                data = serializer.validated_data.get(field.name, [])
-                getattr(obj, field.name).set(data)
+        if list in map(type, request.data.values()):
+            for field in self.get_model_fields():
+                if isinstance(field, models.ManyToManyField):
+                    data = serializer.validated_data.get(field.name, [])
+                    getattr(obj, field.name).set(data)
 
         self.perform_create(obj)
         headers = self.get_success_headers(serializer.data)

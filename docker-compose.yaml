@@ -1,0 +1,25 @@
+version: '3'
+services:
+
+  postgres:
+    image: "postgres:12"
+    environment:
+      POSTGRES_DB: django_shop
+      POSTGRES_USER: django_handlers_all
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - '5434:5432'
+    volumes:
+      - 'postgres-shop-data:/var/lib/postgresql/data'
+
+  backend:
+    build:
+      context: .
+    command: sh -c "python manage.py runserver 0.0.0.0:8001"
+    ports:
+      - '8000:8001'
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-shop-data:
